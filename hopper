@@ -32,7 +32,7 @@ local SCAN_TIME = 4           -- Wie lange scannen
 local HOP_DELAY = 9           -- Total Zeit pro Server (Load + Scan)
 
 local SPECIAL_WEBHOOK = "https://ptb.discord.com/api/webhooks/1466088189260468458/Vi19cPhLJXGckt_0IDjRa6MkGixFznByJ_0BlNmKx0h84VlBgJtrPmtHWmbDHiW3eOPe"
-local SPECIAL_MIN_GEN = 200
+local SPECIAL_MIN_GEN = 10
 local SPECIAL_BRAINROTS = {
     ["garama and madundung"] = true, ["la casa boo"] = true, ["festive 67"] = true,
     ["la ginger sekolah"] = true, ["ketchuru and musturu"] = true, ["la taco combinasion"] = true,
