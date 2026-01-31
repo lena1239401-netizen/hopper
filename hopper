@@ -1,221 +1,580 @@
--- ============================================================
--- ROBLOX BRAINROT TRACKER + INFINITE PERSISTENT HOP
--- ============================================================
+-- ===============================
+-- ROBLOX BRAINROT SCANNER V8.1 FIXED
+-- ✅ FIXED: Brainrot Scanner funktioniert jetzt!
+-- ✅ Using V5.0 scanning method (GetDescendants)
+-- ===============================
 
--- Webhook URLs für verschiedene Schwellenwerte
-local WEBHOOKS = {
-    [50000000] = "https://ptb.discord.com/api/webhooks/1466150960631124077/uSYu5q9WRgbVGc--fYMh8v8oKv8px-6fKsshPhXUPRuejrXRX3fBUnAVenmv792iAdLw",
-    [100000000] = "https://ptb.discord.com/api/webhooks/1466151003249446953/ptYOg2FccEIbO45D7jEtxV0DLSTUjsZ7Wk_P_jcANpgMq14qKJfspx1RpdCGgh_Jom23",
-    [500000000] = "https://ptb.discord.com/api/webhooks/1466151038016028793/9Af0juhrAtmIMPt2JcfPy2Yjqd01VemE6-Il8NH3--0XDICoW17BLz7VOWYZ9XKWj_-f",
-    [1000000000] = "https://ptb.discord.com/api/webhooks/1466151077438033962/2id4dQig9N_7FK-X9rtNGNYRWjv_PXMGSiIwN-lQ36AAqGDYlrB8u_A_k7R2qGWPH04a"
+if not game:IsLoaded() then game.Loaded:Wait() end
+repeat task.wait() until game:GetService("Players").LocalPlayer
+
+local workspace = game:GetService('Workspace')
+local Players = game:GetService('Players')
+local TeleportService = game:GetService('TeleportService')
+local HttpService = game:GetService('HttpService')
+local CoreGui = game:GetService('CoreGui')
+local Lighting = game:GetService('Lighting')
+local RunService = game:GetService('RunService')
+
+repeat wait(0.1) until Players.LocalPlayer
+
+-- ===============================
+-- KONFIGURATION
+-- ===============================
+local VPS_URL = "https://roblox-brainrot-scanner.therixyt4.workers.dev/api"
+local API_SECRET = "123"
+local VPS_PLACE_ID = 109983668079237
+local MIN_GENERATION = 10
+local USERNAME = Players.LocalPlayer.Name
+
+-- HOPPING SETTINGS
+local WAIT_FOR_LOAD = 5       -- Wie lange auf Game Load warten
+local SCAN_TIME = 4           -- Wie lange scannen
+local HOP_DELAY = 9           -- Total Zeit pro Server (Load + Scan)
+
+local SPECIAL_WEBHOOK = "https://ptb.discord.com/api/webhooks/1466088189260468458/Vi19cPhLJXGckt_0IDjRa6MkGixFznByJ_0BlNmKx0h84VlBgJtrPmtHWmbDHiW3eOPe"
+local SPECIAL_MIN_GEN = 200
+local SPECIAL_BRAINROTS = {
+    ["garama and madundung"] = true, ["la casa boo"] = true, ["festive 67"] = true,
+    ["la ginger sekolah"] = true, ["ketchuru and musturu"] = true, ["la taco combinasion"] = true,
+    ["spaghetti aualetti"] = true, ["tang tang keletang"] = true, ["la secret combinasion"] = true,
+    ["chillin chili"] = true, ["lavadorito spinito"] = true, ["celularcini viciosini"] = true,
+    ["tralaledon"] = true, ["ketupat kepat"] = true, ["tictac sahur"] = true,
+    ["fragrama and chocrama"] = true
 }
 
-local HIGHLIGHTS_URL = "https://ptb.discord.com/api/webhooks/1466088189260468458/Vi19cPhLJXGckt_0IDjRa6MkGixFznByJ_0BlNmKx0h84VlBgJtrPmtHWmbDHiW3eOPe"
-local MIN_VAL = 50000000 -- Minimum 50M
-
-local IMG = {
-    ["los mobilis"] = "https://static.wikia.nocookie.net/stealabr/images/2/27/Losmobil.png",
-    ["los combinasionas"] = "https://static.wikia.nocookie.net/stealabr/images/3/38/Los_Combinasion.webp",
-    ["mieteteira bicicleteira"] = "https://static.wikia.nocookie.net/stealabr/images/6/6d/24_sin_t%C3%ADtulo_20251023155436.png",
-    ["spaghetti tualetti"] = "https://static.wikia.nocookie.net/stealabr/images/b/b8/Spaghettitualetti.png",
-    ["esok sekolah"] = "https://static.wikia.nocookie.net/stealabr/images/2/2a/EsokSekolah2.png",
-    ["la casa boo"] = "https://static.wikia.nocookie.net/stealabr/images/d/de/Casa_Booo.png",
-    ["eviledon"] = "https://static.wikia.nocookie.net/stealabr/images/7/78/Eviledonn.png",
-    ["la grande combinasion"] = "https://static.wikia.nocookie.net/stealabr/images/9/9a/Playboi_carti.png",
-    ["chipso and queso"] = "https://static.wikia.nocookie.net/stealabr/images/f/f8/Chipsoqueso.png",
-    ["ketchuru and musturu"] = "https://static.wikia.nocookie.net/stealabr/images/1/14/Ketchuru.png",
-    ["la secret combinasion"] = "https://static.wikia.nocookie.net/stealabr/images/f/f2/Lasecretcombinasion.png",
-    ["los 67"] = "https://images-ext-1.discordapp.net/external/J2ziR07sTWg41X2im54WPH64QEmBVx6l2dOFPf_BLSk/https/static.wikia.nocookie.net/stealabr/images/d/db/Los-67.png",
-    ["dragon cannelloni"] = "https://static.wikia.nocookie.net/stealabr/images/0/02/Dragoncanneloni.png",
-    ["la taco combinasion"] = "https://static.wikia.nocookie.net/stealabr/images/8/84/Latacocombi.png",
-    ["las sis"] = "https://static.wikia.nocookie.net/stealabr/images/e/e8/Las_Sis.png",
-    ["los bros"] = "https://static.wikia.nocookie.net/stealabr/images/5/53/BROOOOOOOO.png",
-    ["tictac sahur"] = "https://static.wikia.nocookie.net/stealabr/images/6/6f/Time_moving_slow.png",
-    ["ketupat kepat"] = "https://static.wikia.nocookie.net/stealabr/images/a/ac/KetupatKepat.png",
-    ["la spooky grande"] = "https://static.wikia.nocookie.net/stealabr/images/5/51/Spooky_Grande.png",
-    ["chillin chili"] = "https://static.wikia.nocookie.net/stealabr/images/e/e0/Chilin.png",
-    ["money money puggy"] = "https://static.wikia.nocookie.net/stealabr/images/0/09/Money_money_puggy.png",
-    ["tang tang keletang"] = "https://static.wikia.nocookie.net/stealabr/images/8/8f/TangTang.png",
-    ["garama and madundung"] = "https://static.wikia.nocookie.net/stealabr/images/e/ee/Garamadundung.png",
-    ["spooky and pumpky"] = "https://static.wikia.nocookie.net/stealabr/images/d/d6/Spookypumpky.png",
-    ["los primos"] = "https://static.wikia.nocookie.net/stealabr/images/9/96/LosPrimos.png",
-    ["burguro and fryuro"] = "https://static.wikia.nocookie.net/stealabr/images/6/65/Burguro-And-Fryuro.png",
-    ["los spaghettis"] = "https://static.wikia.nocookie.net/stealabr/images/d/db/LosSpaghettis.png",
-    ["los spooky combinasionas"] = "https://static.wikia.nocookie.net/stealabr/images/8/8a/Lospookycombi.png",
-    ["los tacoritas"] = "https://static.wikia.nocookie.net/stealabr/images/4/40/My_kids_will_also_rob_you.png",
-    ["tacorita bicicleta"] = "https://static.wikia.nocookie.net/stealabr/images/0/0f/Gonna_rob_you_twin.png",
-    ["tralaledon"] = "https://static.wikia.nocookie.net/stealabr/images/7/79/Brr_Brr_Patapem.png",
-    ["meowl"] = "https://static.wikia.nocookie.net/stealabr/images/b/b8/Clear_background_clear_meowl_image.png",
-    ["strawberry elephant"] = "https://static.wikia.nocookie.net/stealabr/images/5/58/Strawberryelephant.png",
-    ["la extinct grande"] = "https://static.wikia.nocookie.net/stealabr/images/c/cd/La_Extinct_Grande.png",
-    ["orcaledon"] = "https://static.wikia.nocookie.net/stealabr/images/a/a6/Orcaledon.png",
-    ["67"] = "https://static.wikia.nocookie.net/stealabr/images/8/83/BOIIIIIII_SIX_SEVEN_%F0%9F%98%82%F0%9F%98%82%F0%9F%98%82%F0%9F%98%82%F0%9F%98%82%F0%9F%98%82%F0%9F%98%82%F0%9F%98%82%F0%9F%98%82%F0%9F%98%82.png",
-    ["los puggies"] = "https://static.wikia.nocookie.net/stealabr/images/c/c8/LosPuggies2.png",
-    ["fragrama and chocrama"] = "https://static.wikia.nocookie.net/stealabr/images/5/56/Fragrama.png",
-    ["swag soda"] = "https://static.wikia.nocookie.net/stealabr/images/9/9f/Swag_Soda.png",
-    ["los nooo my hotspotsitos"] = "https://static.wikia.nocookie.net/stealabr/images/c/cb/LosNooMyHotspotsitos.png",
-    ["los hotspotsitos"] = "https://static.wikia.nocookie.net/stealabr/images/6/69/Loshotspotsitos.png",
-    ["capitano moby"] = "https://static.wikia.nocookie.net/stealabr/images/e/ef/Moby.png",
-    ["headless horseman"] = "https://static.wikia.nocookie.net/stealabr/images/f/ff/Headlesshorseman.png",
-    ["la supreme combinasion"] = "https://static.wikia.nocookie.net/stealabr/images/5/52/SupremeCombinasion.png",
-    ["nuclearo dinossauro"] = "https://static.wikia.nocookie.net/stealabr/images/9/99/THERE_ARE_BUGS_UNDER_YOUR_SKIN.png",
-    ["mariachi corazoni"] = "https://static.wikia.nocookie.net/stealabr/images/5/5a/MariachiCora.png",
-    ["w or l"] = "https://static.wikia.nocookie.net/stealabr/images/2/28/Win_Or_Lose.png",
-    ["los burritos"] = "https://static.wikia.nocookie.net/stealabr/images/9/97/LosBurritos.png",
-    ["los chicleteiras"] = "https://static.wikia.nocookie.net/stealabr/images/4/4d/Los_ditos.png",
-    ["quesadilla crocodila"] = "https://static.wikia.nocookie.net/stealabr/images/3/3f/QuesadillaCrocodilla.png",
-    ["la cucaracha"] = "https://static.wikia.nocookie.net/stealabr/images/4/46/La_Cucaracha.png",
-    ["to to to sahur"] = "https://static.wikia.nocookie.net/stealabr/images/5/58/Africa_by_toto_%2528to_sahur%2529.png",
-    ["pot hotspot"] = "https://static.wikia.nocookie.net/stealabr/images/4/4b/Pot_Hotspot.png",
-    ["chicleteirina bicicleteirina"] = "https://static.wikia.nocookie.net/stealabr/images/8/83/Chicleteirina_Bicicleteirina.png",
-    ["horegini boom"] = "https://static.wikia.nocookie.net/stealabr/images/5/51/Hboom.png",
-    ["gobblino uniciclino"] = "https://static.wikia.nocookie.net/stealabr/images/b/b3/Turkey.png",
-    ["burrito bandito"] = "https://static.wikia.nocookie.net/stealabr/images/e/e6/PoTaTo.png",
-    ["graipuss medussi"] = "https://static.wikia.nocookie.net/stealabr/images/b/b8/Graipuss.png",
-    ["la sahur combinasion"] = "https://static.wikia.nocookie.net/stealabr/images/e/eb/Sahuria.png",
-    ["perrito burrito"] = "https://static.wikia.nocookie.net/stealabr/images/6/6d/Yummytacodog.png",
-    ["chicleteira bicicleteira"] = "https://static.wikia.nocookie.net/stealabr/images/5/5a/Chicleteira.png",
-    ["los jobcitos"] = "https://static.wikia.nocookie.net/stealabr/images/a/af/LosJobcitos.png",
-    ["pirulitoita bicicleteira"] = "https://static.wikia.nocookie.net/stealabr/images/5/58/Pirulito.png",
-    ["los planitos"] = "https://static.wikia.nocookie.net/stealabr/images/8/83/Los_Planitos.png",
-    ["telemorte"] = "https://static.wikia.nocookie.net/stealabr/images/2/20/Telemorte.png",
-    ["quesadillo vampiro"] = "https://static.wikia.nocookie.net/stealabr/images/6/6b/Quesa_vampiro.png",
-    ["1x1x1x1"] = "https://static.wikia.nocookie.net/stealabr/images/3/39/1x1x1x1t.png",
-    ["guerriro digitale"] = "https://static.wikia.nocookie.net/stealabr/images/9/98/Guerrirodigitale.png",
-    ["los tralaleritos"] = "https://static.wikia.nocookie.net/stealabr/images/0/0f/Los_Tralaleritos.png",
-    ["las tralaleritas"] = "https://static.wikia.nocookie.net/stealabr/images/f/f4/LasTralaleritas.png",
-    ["job job job sahur"] = "https://static.wikia.nocookie.net/stealabr/images/0/03/Job.webp",
-    ["pumpkini spyderini"] = "https://static.wikia.nocookie.net/stealabr/images/d/da/Sammypumpkin.png",
-    ["trickolino"] = "https://static.wikia.nocookie.net/stealabr/images/5/54/Trickortreat.png",
-    ["pot pumpkin"] = "https://static.wikia.nocookie.net/stealabr/images/5/5e/PotPumpkin.png.png",
-    ["los quesadillas"] = "https://static.wikia.nocookie.net/stealabr/images/9/99/LosQuesadillas.png",
-    ["los cucarachas"] = "https://static.wikia.nocookie.net/stealabr/images/a/ac/Los_Cucarachas_no_effect.png",
-    ["los tortus"] = "https://static.wikia.nocookie.net/stealabr/images/c/cb/LosTortuss.png",
-    ["lavadorito spinito"] = "https://static.wikia.nocookie.net/stealabr/images/f/ff/Lavadorito_Spinito.png",
-    ["cooki and milki"] = "https://static.wikia.nocookie.net/stealabr/images/9/9b/Cooki_and_milki.png",
-    ["la jolly grande"] = "https://static.wikia.nocookie.net/stealabr/images/5/5f/La_Chrismas_Grande.png",
-    ["chicleteira noelteira"] = "https://static.wikia.nocookie.net/stealabr/images/b/b3/Noel.png",
-    ["tung tung tung sahur"] = "https://static.wikia.nocookie.net/stealabr/images/0/05/TungTungSahur.png",
-    ["reindeer tralala"] = "https://static.wikia.nocookie.net/stealabr/images/9/9c/Reindeer_Tralala.png",
-    ["ho ho ho sahur"] = "https://static.wikia.nocookie.net/stealabr/images/5/5e/HoHoHoSahur.png",
-    ["santteo"] = "https://static.wikia.nocookie.net/stealabr/images/c/c8/Santteo.png",
-    ["cuadramat and pakrahmatmamat"] = "https://static.wikia.nocookie.net/stealabr/images/a/a3/Cuadramat.png",
-    ["santa hotspot"] = "https://static.wikia.nocookie.net/stealabr/images/4/4d/Santa_Hotspot.png",
-    ["los candies"] = "https://static.wikia.nocookie.net/stealabr/images/f/f9/Candy%2521.png",
-    ["los 25"] = "https://static.wikia.nocookie.net/stealabr/images/9/9b/Transparent_Los_25.png",
-    ["la ginger sekolah"] = "https://static.wikia.nocookie.net/stealabr/images/f/f4/La_ginger_Sekolah.webp",
-    ["noo my present"] = "https://static.wikia.nocookie.net/stealabr/images/3/35/Noo_my_Present.png",
-    ["chimnino"] = "https://static.wikia.nocookie.net/stealabr/images/c/c5/Chimnino.png",
-    ["reinito sleighito"] = "https://static.wikia.nocookie.net/stealabr/images/7/7e/Deer_Sleigh.png",
-    ["triplito tralaleritos"] = "https://static.wikia.nocookie.net/stealabr/images/9/9b/Triplito_Tralaleritos.png"
-}
-
-local HS = game:GetService("HttpService")
-local TS = game:GetService("TeleportService")
-local P = game:GetService("Players")
-local req = request or http_request or (http and http.request)
-
-local function getSvrs()
-    local s, r = pcall(function() return game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100") end)
-    if s and r then local d = pcall(function() return HS:JSONDecode(r) end) if d then return HS:JSONDecode(r).data end end
-    return {}
+local http_request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+if not http_request then
+    error("❌ ERROR: Your executor doesn't support HTTP requests!")
 end
 
-local function hop()
-    task.spawn(function()
-        while true do
-            local svrs = getSvrs()
-            if #svrs > 0 then
-                local valid = {}
-                for _, s in ipairs(svrs) do
-                    if s.id and s.playing and s.maxPlayers and s.playing < s.maxPlayers and s.id ~= game.JobId then
-                        table.insert(valid, s)
-                    end
-                end
-                if #valid > 0 then
-                    pcall(function() TS:TeleportToPlaceInstance(game.PlaceId, valid[math.random(#valid)].id, P.LocalPlayer) end)
-                end
+-- ===============================
+-- WHITE SCREEN UI
+-- ===============================
+local function createWhiteScreen()
+    local whiteScreen = Instance.new("ScreenGui")
+    whiteScreen.Name = "LuxarToolsScreen"
+    whiteScreen.IgnoreGuiInset = true
+    whiteScreen.DisplayOrder = 999999999
+    whiteScreen.ResetOnSpawn = false
+    whiteScreen.Enabled = true
+    whiteScreen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    local success = pcall(function() 
+        whiteScreen.Parent = CoreGui
+    end)
+    if not success or not whiteScreen.Parent then
+        local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui", 5)
+        if playerGui then
+            whiteScreen.Parent = playerGui
+        end
+    end
+    
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.Position = UDim2.new(0, 0, 0, 0)
+    bg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    bg.BorderSizePixel = 0
+    bg.ZIndex = 999999999
+    bg.Parent = whiteScreen
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 100)
+    title.Position = UDim2.new(0, 0, 0.5, -50)
+    title.BackgroundTransparency = 1
+    title.Text = "LUXAR TOOLS V8.1 FIXED"
+    title.TextColor3 = Color3.fromRGB(40, 40, 40)
+    title.TextSize = 72
+    title.Font = Enum.Font.GothamBold
+    title.TextXAlignment = Enum.TextXAlignment.Center
+    title.ZIndex = 1000000000
+    title.Parent = bg
+    
+    local status = Instance.new("TextLabel")
+    status.Size = UDim2.new(1, 0, 0, 30)
+    status.Position = UDim2.new(0, 0, 0.5, 60)
+    status.BackgroundTransparency = 1
+    status.Text = "Initializing..."
+    status.TextColor3 = Color3.fromRGB(100, 100, 100)
+    status.TextSize = 18
+    status.Font = Enum.Font.Gotham
+    status.TextXAlignment = Enum.TextXAlignment.Center
+    status.ZIndex = 1000000000
+    status.Parent = bg
+    
+    local timer = Instance.new("TextLabel")
+    timer.Size = UDim2.new(1, 0, 0, 25)
+    timer.Position = UDim2.new(0, 0, 0.5, 90)
+    timer.BackgroundTransparency = 1
+    timer.Text = ""
+    timer.TextColor3 = Color3.fromRGB(150, 150, 150)
+    timer.TextSize = 16
+    timer.Font = Enum.Font.Gotham
+    timer.TextXAlignment = Enum.TextXAlignment.Center
+    timer.ZIndex = 1000000000
+    timer.Parent = bg
+    
+    return whiteScreen, status, timer
+end
+
+local whiteScreenGui, statusLabel, timerLabel = createWhiteScreen()
+local function updateStatus(text)
+    if statusLabel then statusLabel.Text = text end
+    print("📊 " .. text)
+end
+local function updateTimer(text)
+    if timerLabel then timerLabel.Text = text end
+end
+
+-- ===============================
+-- PERFORMANCE OPTIMIZATIONS
+-- ===============================
+if setfpscap then setfpscap(20) end
+
+task.spawn(function()
+    pcall(function()
+        Lighting.GlobalShadows = false
+        Lighting.Brightness = 0
+        Lighting.FogEnd = 1
+        task.wait(0.1)
+        for _, effect in ipairs(Lighting:GetChildren()) do
+            if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Sky") then
+                pcall(function() effect:Destroy() end)
             end
-            task.wait(0.1)
         end
     end)
+    task.wait(0.1)
+    pcall(function()
+        local terrain = workspace.Terrain
+        terrain.WaterWaveSize = 0
+        terrain.WaterWaveSpeed = 0
+        terrain.WaterTransparency = 1
+        terrain.Decoration = false
+    end)
+    task.wait(0.1)
+    pcall(function()
+        RunService:Set3dRenderingEnabled(false)
+    end)
+end)
+
+-- ===============================
+-- HELPER FUNCTIONS
+-- ===============================
+local function parseMoneyPerSec(text)
+    if not text or not text:find("/s") then return 0 end
+    text = text:gsub("%$",""):gsub("/s",""):gsub("%s+","")
+    local multiplier = text:find("[Bb]") and 1e9 or text:find("[Mm]") and 1e6 or text:find("[Kk]") and 1e3 or text:find("[Tt]") and 1e12 or 1
+    text = text:gsub("[KkMmBbTt]","")
+    return tonumber(text) and tonumber(text) * multiplier or 0
 end
 
-local function parse(t)
-    local n = tonumber(t:match("[%d%.]+")) or 0
-    if t:find("B") then return n * 1e9 end
-    if t:find("M") then return n * 1e6 end
-    if t:find("K") then return n * 1e3 end
-    return n
-end
-
-local function getWebhookForValue(val)
-    local thresholds = {1000000000, 500000000, 100000000, 50000000}
-    for _, threshold in ipairs(thresholds) do
-        if val >= threshold then
-            return WEBHOOKS[threshold]
+local function getUsernameFromDisplayName(displayName)
+    for _, player in pairs(Players:GetPlayers()) do
+        if player.DisplayName == displayName or player.Name == displayName then 
+            return player.Name 
         end
     end
     return nil
 end
 
-local function scan()
-    local br = {}
-    for _, o in pairs(game.Workspace:GetDescendants()) do
-        if o.Name == "Generation" and o:IsA("TextLabel") then
-            local v = parse(o.Text)
-            if v >= MIN_VAL then
-                local p = o.Parent
-                table.insert(br, {
-                    name = p:FindFirstChild("DisplayName") and p.DisplayName.Text or "Unknown",
-                    gen = o.Text,
-                    value = v
-                })
-            end
+local function getUsernameFromPlot(plot)
+    local success, result = pcall(function()
+        if plot:FindFirstChild('Owner') then
+            local owner = plot.Owner
+            if owner:IsA('StringValue') then return owner.Value end
+            if owner:IsA('ObjectValue') and owner.Value then return owner.Value.Name end
         end
-    end
-    
-    if #br > 0 then
-        table.sort(br, function(a, b) return a.value > b.value end)
-        
-        -- Send to appropriate threshold webhook
-        local webhook = getWebhookForValue(br[1].value)
-        if webhook then
-            local msg = ""
-            for i, b in ipairs(br) do
-                msg = msg .. b.name .. "\n\n" .. b.gen .. "\n\njob id: " .. game.JobId .. "\n\nplace id: " .. game.PlaceId .. "\n\n"
-                if i < #br then msg = msg .. "-------------------\n\n" end
-            end
-            pcall(function() req({Url = webhook, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HS:JSONEncode({content = msg})}) end)
-        end
-        
-        -- Highlights webhook with single embed
-        local desc = "**" .. br[1].name .. " (" .. br[1].gen .. ")**\n\n"
-        
-        if #br > 1 then
-            desc = desc .. "```📊 Other Brainrots\n"
-            for i = 2, #br do
-                desc = desc .. i-1 .. "x " .. br[i].name .. " (" .. br[i].gen .. ")\n"
-            end
-            desc = desc .. "```\n"
-        end
-        
-        desc = desc .. os.date("%d/%m/%Y %H:%M")
-        
-        local emb = {
-            description = desc,
-            color = 5814783
-        }
-        
-        local img = IMG[string.lower(br[1].name)]
-        if img then emb.thumbnail = {url = img} end
-        
-        pcall(function() req({Url = HIGHLIGHTS_URL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HS:JSONEncode({embeds = {emb}})}) end)
-    end
-    
-    hop()
+        return plot:GetAttribute('Owner') or plot:GetAttribute('OwnerName') or 
+               (plot:FindFirstChild('OwnerName') and plot.OwnerName:IsA('StringValue') and plot.OwnerName.Value) or nil
+    end)
+    return success and result or nil
 end
 
-if not game:IsLoaded() then game.Loaded:Wait() end
-task.wait(1)
-scan()
+local function getPlotOwnerInfo(plotId)
+    local success, result = pcall(function()
+        local plot = workspace.Plots:FindFirstChild(plotId)
+        if not plot then return nil end
+        
+        local plotSign = plot:FindFirstChild("PlotSign")
+        if plotSign then
+            local surfaceGui = plotSign:FindFirstChild("SurfaceGui")
+            if surfaceGui then
+                local frame = surfaceGui:FindFirstChild("Frame")
+                if frame then
+                    local textLabel = frame:FindFirstChild("TextLabel")
+                    if textLabel and textLabel.Text ~= "" then
+                        local displayName = textLabel.Text:gsub("'s [Bb]ase", ""):gsub("'s [Pp]lot", ""):match("^%s*(.-)%s*$")
+                        if displayName ~= "" then
+                            return getUsernameFromDisplayName(displayName) or getUsernameFromPlot(plot) or displayName
+                        end
+                    end
+                end
+            end
+        end
+        return getUsernameFromPlot(plot)
+    end)
+    return success and result or nil
+end
+
+local function findOwnerForBrainrot(brainrotObj)
+    local current = brainrotObj.Parent
+    while current and current ~= workspace do
+        if current.Parent and current.Parent.Name == "Plots" then
+            return getPlotOwnerInfo(current.Name) or "Unknown"
+        end
+        current = current.Parent
+    end
+    return "Unknown"
+end
+
+-- ===============================
+-- ✅ FIXED BRAINROT SCANNER (from V5.0)
+-- Uses GetDescendants() on entire workspace!
+-- ===============================
+local function scanAllBrainrots()
+    local detections = {}
+    local descendants = workspace:GetDescendants()
+    local batchSize = 50
+    
+    print("🔍 Starting brainrot scan... (Total objects: " .. #descendants .. ")")
+    
+    for i = 1, #descendants, batchSize do
+        local batchEnd = math.min(i + batchSize - 1, #descendants)
+        for j = i, batchEnd do
+            local obj = descendants[j]
+            -- Looking for TextLabel named "Generation"
+            if obj:IsA("TextLabel") and obj.Name == "Generation" then
+                local moneyValue = parseMoneyPerSec(obj.Text)
+                local moneyM = moneyValue / 1e6
+                
+                if moneyM >= MIN_GENERATION then
+                    local parent = obj.Parent
+                    local name = (parent and parent:FindFirstChild("DisplayName") and parent.DisplayName.Text) or "Unknown"
+                    local rarity = (parent and parent:FindFirstChild("Rarity") and parent.Rarity.Text) or "Unknown"
+                    local mutation = (parent and parent:FindFirstChild("Mutation") and parent.Mutation.Visible and parent.Mutation.Text) or "None"
+                    
+                    local owner = findOwnerForBrainrot(obj)
+                    
+                    print("🧠 Found brainrot: " .. name .. " - " .. obj.Text .. " - Owner: " .. owner)
+                    
+                    table.insert(detections, {
+                        name = name,
+                        generation = obj.Text,
+                        rarity = rarity,
+                        mutation = mutation,
+                        owner = owner,
+                        count = 1,
+                        genNum = moneyM
+                    })
+                end
+            end
+        end
+        -- Small delay to prevent lag
+        if i % (batchSize * 2) == 0 then
+            task.wait(0.01)
+        end
+    end
+    
+    -- Sort by generation value
+    table.sort(detections, function(a, b) return a.genNum > b.genNum end)
+    
+    print("📊 Scan complete! Found " .. #detections .. " brainrots")
+    return detections
+end
+
+-- ===============================
+-- HIGHLIGHT SCANNER
+-- ===============================
+local function scanAllHighlights()
+    local highlights = {}
+    
+    pcall(function()
+        local plotsFolder = workspace:FindFirstChild("Plots")
+        if not plotsFolder then return end
+        
+        for _, plot in ipairs(plotsFolder:GetChildren()) do
+            if plot.Name:match("^Plot%d+$") then
+                local highlight = plot:FindFirstChild("Highlight", true)
+                if highlight and highlight:IsA("Highlight") then
+                    local owner = getPlotOwnerInfo(plot.Name) or "Unknown"
+                    
+                    print("✨ Found HIGHLIGHT - Plot: " .. plot.Name .. " - Owner: " .. owner)
+                    table.insert(highlights, {
+                        owner = owner,
+                        plotId = plot.Name
+                    })
+                end
+            end
+        end
+        
+        print("📊 Found " .. #highlights .. " highlights")
+    end)
+    
+    return highlights
+end
+
+-- ===============================
+-- API - OHNE NAMEN!
+-- ===============================
+local function sendToAPI(brainrots, highlights, serverId)
+    if #brainrots == 0 and #highlights == 0 then return end
+    
+    task.spawn(function()
+        local success = pcall(function()
+            local filteredBrainrots = {}
+            
+            for _, br in ipairs(brainrots) do
+                local genNum = br.genNum or (parseMoneyPerSec(br.generation) / 1e6)
+                if genNum >= MIN_GENERATION then
+                    table.insert(filteredBrainrots, {
+                        -- ❌ NAME ENTFERNT!
+                        generation = br.generation,
+                        owner = br.owner,
+                        plotId = "Unknown"
+                    })
+                end
+            end
+            
+            if #filteredBrainrots == 0 and #highlights == 0 then 
+                print("ℹ️ No brainrots/highlights met threshold")
+                return 
+            end
+            
+            local payload = {
+                serverId = serverId,
+                playerCount = #Players:GetPlayers(),
+                maxPlayers = Players.MaxPlayers,
+                worker = USERNAME,
+                brainrots = filteredBrainrots,
+                highlights = highlights
+            }
+            
+            print("📤 Sending " .. #filteredBrainrots .. " brainrots + " .. #highlights .. " highlights to API...")
+            
+            local response = http_request({
+                Url = VPS_URL .. "/submit",
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json",
+                    ["X-API-Secret"] = API_SECRET
+                },
+                Body = HttpService:JSONEncode(payload)
+            })
+            
+            if response and response.StatusCode == 200 then
+                print("✅ Successfully sent to API!")
+            else
+                print("⚠️ API failed (Status: " .. tostring(response and response.StatusCode or "nil") .. ")")
+            end
+        end)
+        
+        if not success then
+            print("❌ Error sending to API")
+        end
+    end)
+end
+
+local function sendToSpecialWebhook(eligibleBrainrots, serverId)
+    if #eligibleBrainrots == 0 or SPECIAL_WEBHOOK == "" then return end
+    task.spawn(function()
+        pcall(function()
+            local titleParts = {}
+            for _, br in ipairs(eligibleBrainrots) do
+                table.insert(titleParts, br.name .. " " .. br.generation)
+            end
+            http_request({
+                Url = SPECIAL_WEBHOOK,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode({embeds = {{
+                    title = table.concat(titleParts, " | "),
+                    description = "**Server ID (Real)**\n```" .. serverId .. "```",
+                    color = 16776960,
+                    footer = { text = "Worker: " .. USERNAME },
+                    timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+                }}})
+            })
+        end)
+    end)
+end
+
+-- ===============================
+-- SERVER HOP FUNCTION
+-- ===============================
+local serverQueue = {}
+local lastAPICall = 0
+local API_COOLDOWN = 60
+
+local function fetchServersToQueue()
+    if tick() - lastAPICall < API_COOLDOWN then return end
+    
+    task.spawn(function()
+        pcall(function()
+            local url = "https://games.roblox.com/v1/games/" .. tostring(VPS_PLACE_ID) .. "/servers/Public?limit=100"
+            lastAPICall = tick()
+            
+            local response = http_request({
+                Url = url,
+                Method = "GET",
+                Headers = {
+                    ["User-Agent"] = "Roblox/WinInet",
+                    ["Accept"] = "application/json"
+                }
+            })
+            
+            if response and response.StatusCode == 200 then
+                local data = HttpService:JSONDecode(response.Body)
+                if data and data.data then
+                    serverQueue = {}
+                    for _, server in ipairs(data.data) do
+                        if server.id and server.id ~= game.JobId then
+                            table.insert(serverQueue, server.id)
+                        end
+                    end
+                    for i = #serverQueue, 2, -1 do
+                        local j = math.random(i)
+                        serverQueue[i], serverQueue[j] = serverQueue[j], serverQueue[i]
+                    end
+                    print("✅ Queued " .. #serverQueue .. " servers")
+                end
+            end
+        end)
+    end)
+end
+
+local function hopToNextServer()
+    -- Versuch 1: Queued Server
+    if #serverQueue > 0 then
+        local serverId = table.remove(serverQueue, 1)
+        local success = pcall(function()
+            TeleportService:TeleportToPlaceInstance(VPS_PLACE_ID, serverId, Players.LocalPlayer)
+        end)
+        if success then return true end
+    end
+    
+    -- Versuch 2: Random
+    local success = pcall(function()
+        TeleportService:Teleport(VPS_PLACE_ID, Players.LocalPlayer)
+    end)
+    return success
+end
+
+-- ===============================
+-- MAIN LOOP
+-- ===============================
+local totalScanned = 0
+local totalFound = 0
+local scanInProgress = false
+
+local function performFullScan()
+    if scanInProgress then return end
+    scanInProgress = true
+    
+    local serverId = game.JobId
+    
+    -- Phase 1: Warte auf Game Load
+    updateStatus("Waiting for game load...")
+    local loadStartTime = tick()
+    
+    repeat 
+        task.wait(0.2)
+        if tick() - loadStartTime > WAIT_FOR_LOAD then
+            updateStatus("Load timeout, skipping...")
+            scanInProgress = false
+            return
+        end
+    until workspace:FindFirstChild("Plots") and #workspace:GetChildren() >= 5
+    
+    print("✅ Game loaded! Starting scan...")
+    
+    -- Phase 2: Scan - USING FIXED SCANNER!
+    updateStatus("Scanning brainrots & highlights...")
+    task.wait(0.5)
+    
+    local brainrots = scanAllBrainrots()  -- ✅ Using V5.0 method!
+    local highlights = scanAllHighlights()
+    totalScanned = totalScanned + 1
+    
+    if #brainrots > 0 or #highlights > 0 then
+        totalFound = totalFound + #brainrots
+        updateStatus(string.format("✅ Found %d brainrots + %d highlights!", #brainrots, #highlights))
+        
+        -- Send to API
+        sendToAPI(brainrots, highlights, serverId)
+        
+        -- Send special brainrots to Discord
+        task.spawn(function()
+            pcall(function()
+                local specialBrainrots = {}
+                for _, br in ipairs(brainrots) do
+                    local genNum = br.genNum or (parseMoneyPerSec(br.generation) / 1e6)
+                    local nameNorm = (br.name or ""):lower()
+                    if SPECIAL_BRAINROTS[nameNorm] or genNum >= SPECIAL_MIN_GEN then
+                        table.insert(specialBrainrots, br)
+                    end
+                end
+                if #specialBrainrots > 0 then
+                    sendToSpecialWebhook(specialBrainrots, serverId)
+                end
+            end)
+        end)
+        
+        task.wait(1)
+    else
+        updateStatus(string.format("No brainrots (Servers scanned: %d)", totalScanned))
+    end
+    
+    scanInProgress = false
+end
+
+-- ===============================
+-- AUTO HOP LOOP
+-- ===============================
+print("✅ Scanner V8.1 FIXED loaded!")
+print("✅ Using V5.0 scanning method!")
+print("⚡ Total cycle time: " .. HOP_DELAY .. " seconds")
+
+-- Fetch server queue im Hintergrund
+task.spawn(function()
+    while true do
+        fetchServersToQueue()
+        task.wait(API_COOLDOWN)
+    end
+end)
+
+-- Main loop
+task.spawn(function()
+    task.wait(1)
+    
+    while true do
+        performFullScan()
+        
+        local remaining = HOP_DELAY - (WAIT_FOR_LOAD + SCAN_TIME)
+        if remaining > 0 then
+            for i = math.floor(remaining), 1, -1 do
+                updateTimer(string.format("Next hop in %d seconds...", i))
+                task.wait(1)
+            end
+        end
+        
+        updateStatus("Hopping to next server...")
+        updateTimer("")
+        
+        if not hopToNextServer() then
+            updateStatus("Hop failed, retrying...")
+            task.wait(2)
+        else
+            task.wait(1)
+        end
+    end
+end)
+
+-- Teleport failure handler
+TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage)
+    print("⚠️ Teleport failed:", result, errorMessage)
+    scanInProgress = false
+    task.wait(1)
+    hopToNextServer()
+end)
+
+print("🔥 Scanner running!")
+print("📊 Stats will update as servers are scanned...")
