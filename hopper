@@ -1,7 +1,6 @@
 -- ===============================
--- ROBLOX BRAINROT SCANNER V8.1 FIXED
--- ✅ FIXED: Brainrot Scanner funktioniert jetzt!
--- ✅ Using V5.0 scanning method (GetDescendants)
+-- ROBLOX BRAINROT SCANNER V9.0 ULTRA FAST
+-- ⚡ MAXIMUM SPEED - NO DELAYS
 -- ===============================
 
 if not game:IsLoaded() then game.Loaded:Wait() end
@@ -15,10 +14,8 @@ local CoreGui = game:GetService('CoreGui')
 local Lighting = game:GetService('Lighting')
 local RunService = game:GetService('RunService')
 
-repeat wait(0.1) until Players.LocalPlayer
-
 -- ===============================
--- KONFIGURATION
+-- KONFIGURATION - ULTRA SPEED
 -- ===============================
 local VPS_URL = "https://roblox-brainrot-scanner.therixyt4.workers.dev/api"
 local API_SECRET = "123"
@@ -26,10 +23,10 @@ local VPS_PLACE_ID = 109983668079237
 local MIN_GENERATION = 10
 local USERNAME = Players.LocalPlayer.Name
 
--- HOPPING SETTINGS
-local WAIT_FOR_LOAD = 5       -- Wie lange auf Game Load warten
-local SCAN_TIME = 4           -- Wie lange scannen
-local HOP_DELAY = 9           -- Total Zeit pro Server (Load + Scan)
+-- ⚡ ULTRA FAST SETTINGS
+local WAIT_FOR_LOAD = 2       -- 5 -> 2 seconds
+local SCAN_TIME = 1.5         -- 4 -> 1.5 seconds  
+local HOP_DELAY = 3.5         -- 9 -> 3.5 seconds TOTAL
 
 local SPECIAL_WEBHOOK = "https://ptb.discord.com/api/webhooks/1466088189260468458/Vi19cPhLJXGckt_0IDjRa6MkGixFznByJ_0BlNmKx0h84VlBgJtrPmtHWmbDHiW3eOPe"
 local SPECIAL_MIN_GEN = 200
@@ -43,121 +40,64 @@ local SPECIAL_BRAINROTS = {
 }
 
 local http_request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-if not http_request then
-    error("❌ ERROR: Your executor doesn't support HTTP requests!")
-end
+if not http_request then error("❌ ERROR: No HTTP support!") end
 
 -- ===============================
--- WHITE SCREEN UI
+-- MINIMAL UI - NO LAG
 -- ===============================
-local function createWhiteScreen()
-    local whiteScreen = Instance.new("ScreenGui")
-    whiteScreen.Name = "LuxarToolsScreen"
-    whiteScreen.IgnoreGuiInset = true
-    whiteScreen.DisplayOrder = 999999999
-    whiteScreen.ResetOnSpawn = false
-    whiteScreen.Enabled = true
-    whiteScreen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
-    local success = pcall(function() 
-        whiteScreen.Parent = CoreGui
-    end)
-    if not success or not whiteScreen.Parent then
-        local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui", 5)
-        if playerGui then
-            whiteScreen.Parent = playerGui
-        end
-    end
+local function createFastUI()
+    local sg = Instance.new("ScreenGui")
+    sg.Name = "LuxarFast"
+    sg.IgnoreGuiInset = true
+    sg.DisplayOrder = 999999999
+    sg.ResetOnSpawn = false
+    pcall(function() sg.Parent = CoreGui end)
+    if not sg.Parent then sg.Parent = Players.LocalPlayer:WaitForChild("PlayerGui") end
     
     local bg = Instance.new("Frame")
     bg.Size = UDim2.new(1, 0, 1, 0)
-    bg.Position = UDim2.new(0, 0, 0, 0)
     bg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     bg.BorderSizePixel = 0
-    bg.ZIndex = 999999999
-    bg.Parent = whiteScreen
+    bg.Parent = sg
     
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 100)
-    title.Position = UDim2.new(0, 0, 0.5, -50)
+    title.Size = UDim2.new(1, 0, 0, 80)
+    title.Position = UDim2.new(0, 0, 0.5, -40)
     title.BackgroundTransparency = 1
-    title.Text = "LUXAR TOOLS V8.1 FIXED"
+    title.Text = "⚡ ULTRA FAST V9.0"
     title.TextColor3 = Color3.fromRGB(40, 40, 40)
-    title.TextSize = 72
+    title.TextSize = 60
     title.Font = Enum.Font.GothamBold
-    title.TextXAlignment = Enum.TextXAlignment.Center
-    title.ZIndex = 1000000000
     title.Parent = bg
     
     local status = Instance.new("TextLabel")
-    status.Size = UDim2.new(1, 0, 0, 30)
-    status.Position = UDim2.new(0, 0, 0.5, 60)
+    status.Size = UDim2.new(1, 0, 0, 25)
+    status.Position = UDim2.new(0, 0, 0.5, 50)
     status.BackgroundTransparency = 1
-    status.Text = "Initializing..."
+    status.Text = "Loading..."
     status.TextColor3 = Color3.fromRGB(100, 100, 100)
-    status.TextSize = 18
+    status.TextSize = 16
     status.Font = Enum.Font.Gotham
-    status.TextXAlignment = Enum.TextXAlignment.Center
-    status.ZIndex = 1000000000
     status.Parent = bg
     
-    local timer = Instance.new("TextLabel")
-    timer.Size = UDim2.new(1, 0, 0, 25)
-    timer.Position = UDim2.new(0, 0, 0.5, 90)
-    timer.BackgroundTransparency = 1
-    timer.Text = ""
-    timer.TextColor3 = Color3.fromRGB(150, 150, 150)
-    timer.TextSize = 16
-    timer.Font = Enum.Font.Gotham
-    timer.TextXAlignment = Enum.TextXAlignment.Center
-    timer.ZIndex = 1000000000
-    timer.Parent = bg
-    
-    return whiteScreen, status, timer
+    return sg, status
 end
 
-local whiteScreenGui, statusLabel, timerLabel = createWhiteScreen()
+local whiteScreenGui, statusLabel = createFastUI()
 local function updateStatus(text)
     if statusLabel then statusLabel.Text = text end
-    print("📊 " .. text)
-end
-local function updateTimer(text)
-    if timerLabel then timerLabel.Text = text end
 end
 
 -- ===============================
--- PERFORMANCE OPTIMIZATIONS
+-- EXTREME PERFORMANCE BOOST
 -- ===============================
-if setfpscap then setfpscap(20) end
-
-task.spawn(function()
-    pcall(function()
-        Lighting.GlobalShadows = false
-        Lighting.Brightness = 0
-        Lighting.FogEnd = 1
-        task.wait(0.1)
-        for _, effect in ipairs(Lighting:GetChildren()) do
-            if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Sky") then
-                pcall(function() effect:Destroy() end)
-            end
-        end
-    end)
-    task.wait(0.1)
-    pcall(function()
-        local terrain = workspace.Terrain
-        terrain.WaterWaveSize = 0
-        terrain.WaterWaveSpeed = 0
-        terrain.WaterTransparency = 1
-        terrain.Decoration = false
-    end)
-    task.wait(0.1)
-    pcall(function()
-        RunService:Set3dRenderingEnabled(false)
-    end)
-end)
+if setfpscap then setfpscap(10) end  -- Lower FPS = faster
+pcall(function() RunService:Set3dRenderingEnabled(false) end)
+pcall(function() Lighting.GlobalShadows = false Lighting.Brightness = 0 Lighting.FogEnd = 1 end)
+pcall(function() for _, e in ipairs(Lighting:GetChildren()) do if e:IsA("PostEffect") or e:IsA("Atmosphere") or e:IsA("Sky") then e:Destroy() end end end)
 
 -- ===============================
--- HELPER FUNCTIONS
+-- ULTRA FAST FUNCTIONS
 -- ===============================
 local function parseMoneyPerSec(text)
     if not text or not text:find("/s") then return 0 end
@@ -169,9 +109,7 @@ end
 
 local function getUsernameFromDisplayName(displayName)
     for _, player in pairs(Players:GetPlayers()) do
-        if player.DisplayName == displayName or player.Name == displayName then 
-            return player.Name 
-        end
+        if player.DisplayName == displayName or player.Name == displayName then return player.Name end
     end
     return nil
 end
@@ -193,7 +131,6 @@ local function getPlotOwnerInfo(plotId)
     local success, result = pcall(function()
         local plot = workspace.Plots:FindFirstChild(plotId)
         if not plot then return nil end
-        
         local plotSign = plot:FindFirstChild("PlotSign")
         if plotSign then
             local surfaceGui = plotSign:FindFirstChild("SurfaceGui")
@@ -226,107 +163,75 @@ local function findOwnerForBrainrot(brainrotObj)
     return "Unknown"
 end
 
--- ===============================
--- ✅ FIXED BRAINROT SCANNER (from V5.0)
--- Uses GetDescendants() on entire workspace!
--- ===============================
+-- ⚡ ULTRA FAST SCANNER - NO DELAYS
 local function scanAllBrainrots()
     local detections = {}
     local descendants = workspace:GetDescendants()
-    local batchSize = 50
+    local batchSize = 100  -- Bigger batches = faster
     
-    print("🔍 Starting brainrot scan... (Total objects: " .. #descendants .. ")")
+    print("🔍 Starting scan... (" .. #descendants .. " objects)")
     
     for i = 1, #descendants, batchSize do
         local batchEnd = math.min(i + batchSize - 1, #descendants)
         for j = i, batchEnd do
             local obj = descendants[j]
-            -- Looking for TextLabel named "Generation"
             if obj:IsA("TextLabel") and obj.Name == "Generation" then
                 local moneyValue = parseMoneyPerSec(obj.Text)
                 local moneyM = moneyValue / 1e6
-                
                 if moneyM >= MIN_GENERATION then
                     local parent = obj.Parent
                     local name = (parent and parent:FindFirstChild("DisplayName") and parent.DisplayName.Text) or "Unknown"
-                    local rarity = (parent and parent:FindFirstChild("Rarity") and parent.Rarity.Text) or "Unknown"
-                    local mutation = (parent and parent:FindFirstChild("Mutation") and parent.Mutation.Visible and parent.Mutation.Text) or "None"
-                    
                     local owner = findOwnerForBrainrot(obj)
                     
-                    print("🧠 Found brainrot: " .. name .. " - " .. obj.Text .. " - Owner: " .. owner)
+                    print("🧠 Found: " .. name .. " - " .. obj.Text .. " - Owner: " .. owner)
                     
                     table.insert(detections, {
                         name = name,
                         generation = obj.Text,
-                        rarity = rarity,
-                        mutation = mutation,
                         owner = owner,
-                        count = 1,
                         genNum = moneyM
                     })
                 end
             end
         end
-        -- Small delay to prevent lag
-        if i % (batchSize * 2) == 0 then
-            task.wait(0.01)
-        end
+        -- NO DELAYS! Keep scanning
     end
     
-    -- Sort by generation value
     table.sort(detections, function(a, b) return a.genNum > b.genNum end)
-    
     print("📊 Scan complete! Found " .. #detections .. " brainrots")
     return detections
 end
 
--- ===============================
--- HIGHLIGHT SCANNER
--- ===============================
 local function scanAllHighlights()
     local highlights = {}
-    
     pcall(function()
         local plotsFolder = workspace:FindFirstChild("Plots")
         if not plotsFolder then return end
-        
         for _, plot in ipairs(plotsFolder:GetChildren()) do
             if plot.Name:match("^Plot%d+$") then
                 local highlight = plot:FindFirstChild("Highlight", true)
                 if highlight and highlight:IsA("Highlight") then
-                    local owner = getPlotOwnerInfo(plot.Name) or "Unknown"
-                    
-                    print("✨ Found HIGHLIGHT - Plot: " .. plot.Name .. " - Owner: " .. owner)
                     table.insert(highlights, {
-                        owner = owner,
+                        owner = getPlotOwnerInfo(plot.Name) or "Unknown",
                         plotId = plot.Name
                     })
                 end
             end
         end
-        
-        print("📊 Found " .. #highlights .. " highlights")
     end)
-    
     return highlights
 end
 
--- ===============================
--- API - OHNE NAMEN!
--- ===============================
+-- ⚡ INSTANT API SEND - NO WAIT
 local function sendToAPI(brainrots, highlights, serverId)
     if #brainrots == 0 and #highlights == 0 then return end
-    
     task.spawn(function()
-        local success = pcall(function()
+        pcall(function()
             local filteredBrainrots = {}
-            
             for _, br in ipairs(brainrots) do
                 local genNum = br.genNum or (parseMoneyPerSec(br.generation) / 1e6)
                 if genNum >= MIN_GENERATION then
                     table.insert(filteredBrainrots, {
-                        -- ❌ NAME ENTFERNT!
                         generation = br.generation,
                         owner = br.owner,
                         plotId = "Unknown"
@@ -334,93 +239,96 @@ local function sendToAPI(brainrots, highlights, serverId)
                 end
             end
             
-            if #filteredBrainrots == 0 and #highlights == 0 then 
-                print("ℹ️ No brainrots/highlights met threshold")
-                return 
-            end
+            if #filteredBrainrots == 0 and #highlights == 0 then return end
             
-            local payload = {
-                serverId = serverId,
-                playerCount = #Players:GetPlayers(),
-                maxPlayers = Players.MaxPlayers,
-                worker = USERNAME,
-                brainrots = filteredBrainrots,
-                highlights = highlights
-            }
-            
-            print("📤 Sending " .. #filteredBrainrots .. " brainrots + " .. #highlights .. " highlights to API...")
-            
-            local response = http_request({
+            http_request({
                 Url = VPS_URL .. "/submit",
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json",
                     ["X-API-Secret"] = API_SECRET
                 },
-                Body = HttpService:JSONEncode(payload)
+                Body = HttpService:JSONEncode({
+                    serverId = serverId,
+                    playerCount = #Players:GetPlayers(),
+                    maxPlayers = Players.MaxPlayers,
+                    worker = USERNAME,
+                    brainrots = filteredBrainrots,
+                    highlights = highlights
+                })
             })
-            
-            if response and response.StatusCode == 200 then
-                print("✅ Successfully sent to API!")
-            else
-                print("⚠️ API failed (Status: " .. tostring(response and response.StatusCode or "nil") .. ")")
-            end
         end)
-        
-        if not success then
-            print("❌ Error sending to API")
-        end
     end)
 end
 
+-- ⚡ INSTANT WEBHOOK - NO WAIT
 local function sendToSpecialWebhook(eligibleBrainrots, serverId)
-    if #eligibleBrainrots == 0 or SPECIAL_WEBHOOK == "" then return end
+    if #eligibleBrainrots == 0 then 
+        print("⚠️ No special brainrots to send to webhook")
+        return 
+    end
+    if SPECIAL_WEBHOOK == "" then 
+        print("⚠️ Webhook URL is empty")
+        return 
+    end
+    
+    print("🔥 Sending " .. #eligibleBrainrots .. " special brainrots to webhook!")
+    
     task.spawn(function()
         pcall(function()
             local titleParts = {}
             for _, br in ipairs(eligibleBrainrots) do
-                table.insert(titleParts, br.name .. " " .. br.generation)
+                local title = br.name .. " " .. br.generation
+                print("   📌 " .. title)
+                table.insert(titleParts, title)
             end
-            http_request({
-                Url = SPECIAL_WEBHOOK,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = HttpService:JSONEncode({embeds = {{
+            
+            local payload = {
+                embeds = {{
                     title = table.concat(titleParts, " | "),
-                    description = "**Server ID (Real)**\n```" .. serverId .. "```",
+                    description = "**Server ID**\n```" .. serverId .. "```",
                     color = 16776960,
                     footer = { text = "Worker: " .. USERNAME },
                     timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-                }}})
+                }}
+            }
+            
+            print("📤 Sending webhook...")
+            local response = http_request({
+                Url = SPECIAL_WEBHOOK,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(payload)
             })
+            
+            if response and response.StatusCode then
+                print("✅ Webhook sent! Status: " .. response.StatusCode)
+            else
+                print("❌ Webhook failed - no response")
+            end
         end)
     end)
 end
 
 -- ===============================
--- SERVER HOP FUNCTION
+-- ⚡ ULTRA FAST SERVER HOPPING
 -- ===============================
 local serverQueue = {}
 local lastAPICall = 0
-local API_COOLDOWN = 60
 
 local function fetchServersToQueue()
-    if tick() - lastAPICall < API_COOLDOWN then return end
-    
+    if tick() - lastAPICall < 30 then return end  -- Faster refresh
     task.spawn(function()
         pcall(function()
-            local url = "https://games.roblox.com/v1/games/" .. tostring(VPS_PLACE_ID) .. "/servers/Public?limit=100"
             lastAPICall = tick()
-            
             local response = http_request({
-                Url = url,
+                Url = "https://games.roblox.com/v1/games/" .. tostring(VPS_PLACE_ID) .. "/servers/Public?limit=100",
                 Method = "GET",
                 Headers = {
                     ["User-Agent"] = "Roblox/WinInet",
                     ["Accept"] = "application/json"
                 }
             })
-            
             if response and response.StatusCode == 200 then
                 local data = HttpService:JSONDecode(response.Body)
                 if data and data.data then
@@ -430,11 +338,6 @@ local function fetchServersToQueue()
                             table.insert(serverQueue, server.id)
                         end
                     end
-                    for i = #serverQueue, 2, -1 do
-                        local j = math.random(i)
-                        serverQueue[i], serverQueue[j] = serverQueue[j], serverQueue[i]
-                    end
-                    print("✅ Queued " .. #serverQueue .. " servers")
                 end
             end
         end)
@@ -442,139 +345,155 @@ local function fetchServersToQueue()
 end
 
 local function hopToNextServer()
-    -- Versuch 1: Queued Server
     if #serverQueue > 0 then
         local serverId = table.remove(serverQueue, 1)
-        local success = pcall(function()
+        pcall(function()
             TeleportService:TeleportToPlaceInstance(VPS_PLACE_ID, serverId, Players.LocalPlayer)
         end)
-        if success then return true end
+        return true
     end
-    
-    -- Versuch 2: Random
-    local success = pcall(function()
+    pcall(function()
         TeleportService:Teleport(VPS_PLACE_ID, Players.LocalPlayer)
     end)
-    return success
+    return true
 end
 
 -- ===============================
--- MAIN LOOP
+-- ⚡ MAIN ULTRA FAST LOOP
 -- ===============================
 local totalScanned = 0
-local totalFound = 0
 local scanInProgress = false
 
-local function performFullScan()
+local function performFastScan()
     if scanInProgress then return end
     scanInProgress = true
     
     local serverId = game.JobId
     
-    -- Phase 1: Warte auf Game Load
-    updateStatus("Waiting for game load...")
+    -- Phase 1: Wait for full game load
+    updateStatus("Waiting for game...")
     local loadStartTime = tick()
+    local gameLoaded = false
     
+    -- Wait for Plots folder to exist AND have plots in it
     repeat 
-        task.wait(0.2)
         if tick() - loadStartTime > WAIT_FOR_LOAD then
-            updateStatus("Load timeout, skipping...")
+            updateStatus("Load timeout, hopping...")
             scanInProgress = false
             return
         end
-    until workspace:FindFirstChild("Plots") and #workspace:GetChildren() >= 5
+        task.wait(0.1)
+        
+        -- Check if game is actually loaded
+        if workspace:FindFirstChild("Plots") then
+            local plotsFolder = workspace.Plots
+            local plotCount = 0
+            for _, child in pairs(plotsFolder:GetChildren()) do
+                if child.Name:match("^Plot%d+$") then
+                    plotCount = plotCount + 1
+                end
+            end
+            
+            -- Game is loaded if we have at least some plots
+            if plotCount > 0 then
+                gameLoaded = true
+                print("✅ Game loaded! Found " .. plotCount .. " plots")
+                break
+            end
+        end
+    until gameLoaded
     
-    print("✅ Game loaded! Starting scan...")
-    
-    -- Phase 2: Scan - USING FIXED SCANNER!
-    updateStatus("Scanning brainrots & highlights...")
+    -- Extra wait to ensure everything is loaded
+    updateStatus("Game loaded, waiting...")
     task.wait(0.5)
     
-    local brainrots = scanAllBrainrots()  -- ✅ Using V5.0 method!
+    -- Phase 2: INSTANT SCAN
+    updateStatus("⚡ Scanning...")
+    
+    local brainrots = scanAllBrainrots()
     local highlights = scanAllHighlights()
     totalScanned = totalScanned + 1
     
     if #brainrots > 0 or #highlights > 0 then
-        totalFound = totalFound + #brainrots
-        updateStatus(string.format("✅ Found %d brainrots + %d highlights!", #brainrots, #highlights))
+        updateStatus(string.format("✅ %d brainrots + %d highlights!", #brainrots, #highlights))
         
-        -- Send to API
+        print("=" .. string.rep("=", 50))
+        print("📊 SCAN RESULTS:")
+        print("   Total Brainrots: " .. #brainrots)
+        print("   Total Highlights: " .. #highlights)
+        
+        -- Send INSTANTLY - no wait
         sendToAPI(brainrots, highlights, serverId)
         
-        -- Send special brainrots to Discord
-        task.spawn(function()
-            pcall(function()
-                local specialBrainrots = {}
-                for _, br in ipairs(brainrots) do
-                    local genNum = br.genNum or (parseMoneyPerSec(br.generation) / 1e6)
-                    local nameNorm = (br.name or ""):lower()
-                    if SPECIAL_BRAINROTS[nameNorm] or genNum >= SPECIAL_MIN_GEN then
-                        table.insert(specialBrainrots, br)
-                    end
-                end
-                if #specialBrainrots > 0 then
-                    sendToSpecialWebhook(specialBrainrots, serverId)
-                end
-            end)
-        end)
+        -- Send special to Discord
+        print("\n🔍 Checking for SPECIAL brainrots...")
+        local specialBrainrots = {}
+        for _, br in ipairs(brainrots) do
+            local genNum = br.genNum or (parseMoneyPerSec(br.generation) / 1e6)
+            local nameNorm = (br.name or ""):lower()
+            
+            print("   Checking: " .. br.name .. " (" .. br.generation .. ")")
+            print("      GenNum: " .. genNum .. "M")
+            print("      Name normalized: " .. nameNorm)
+            print("      Is in list: " .. tostring(SPECIAL_BRAINROTS[nameNorm] or false))
+            print("      Gen >= " .. SPECIAL_MIN_GEN .. ": " .. tostring(genNum >= SPECIAL_MIN_GEN))
+            
+            if SPECIAL_BRAINROTS[nameNorm] or genNum >= SPECIAL_MIN_GEN then
+                print("      ✅ SPECIAL BRAINROT DETECTED!")
+                table.insert(specialBrainrots, br)
+            end
+        end
         
-        task.wait(1)
+        print("\n🔥 Total SPECIAL brainrots: " .. #specialBrainrots)
+        
+        if #specialBrainrots > 0 then
+            sendToSpecialWebhook(specialBrainrots, serverId)
+        else
+            print("⚠️ No special brainrots matched criteria")
+        end
+        print("=" .. string.rep("=", 50))
     else
-        updateStatus(string.format("No brainrots (Servers scanned: %d)", totalScanned))
+        updateStatus(string.format("Nothing (Scanned: %d)", totalScanned))
     end
     
     scanInProgress = false
 end
 
 -- ===============================
--- AUTO HOP LOOP
+-- ⚡ AUTO HOP - ULTRA FAST
 -- ===============================
-print("✅ Scanner V8.1 FIXED loaded!")
-print("✅ Using V5.0 scanning method!")
-print("⚡ Total cycle time: " .. HOP_DELAY .. " seconds")
+print("⚡ ULTRA FAST V9.0 LOADED!")
+print("⚡ Hop every " .. HOP_DELAY .. " seconds!")
 
--- Fetch server queue im Hintergrund
+-- Fetch servers in background
 task.spawn(function()
     while true do
         fetchServersToQueue()
-        task.wait(API_COOLDOWN)
+        task.wait(30)
     end
 end)
 
--- Main loop
+-- MAIN FAST LOOP
 task.spawn(function()
-    task.wait(1)
-    
     while true do
-        performFullScan()
+        performFastScan()
         
-        local remaining = HOP_DELAY - (WAIT_FOR_LOAD + SCAN_TIME)
+        -- Quick countdown
+        local remaining = HOP_DELAY - WAIT_FOR_LOAD - SCAN_TIME
         if remaining > 0 then
-            for i = math.floor(remaining), 1, -1 do
-                updateTimer(string.format("Next hop in %d seconds...", i))
-                task.wait(1)
-            end
+            task.wait(remaining)
         end
         
-        updateStatus("Hopping to next server...")
-        updateTimer("")
-        
-        if not hopToNextServer() then
-            updateStatus("Hop failed, retrying...")
-            task.wait(2)
-        else
-            task.wait(1)
-        end
+        updateStatus("⚡ Hopping...")
+        hopToNextServer()
+        task.wait(0.5)  -- Minimal delay
     end
 end)
 
--- Teleport failure handler
-TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage)
-    print("⚠️ Teleport failed:", result, errorMessage)
+TeleportService.TeleportInitFailed:Connect(function()
+    updateStatus("Hop failed, retry...")
     scanInProgress = false
-    task.wait(1)
     hopToNextServer()
 end)
 
-print("🔥 Scanner running!")
-print("📊 Stats will update as servers are scanned...")
+print("⚡ RUNNING AT MAXIMUM SPEED!")
