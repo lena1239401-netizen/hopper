@@ -1,5 +1,5 @@
 -- ============================================================
--- ROBLOX BRAINROT TRACKER + INFINITE PERSISTENT HOP
+-- ROBLOX BRAINROT TRACKER + INFINITE PERSISTENT HOP (ULTRA FAST)
 -- ============================================================
 
 -- Webhook URLs for different value ranges
@@ -11,10 +11,9 @@ local WEBHOOKS = {
     ["1B"] = "https://ptb.discord.com/api/webhooks/1466151123944472597/CtZbm3U3Lsi1TGdOfLPqGdziF_0xpZ-cWMqXupUeE3-YEF-BcpJufH5PUBFFlSborgzM"
 }
 
--- Highlight webhook for all 10M+ brainrots
 local HIGHLIGHT_WEBHOOK = "https://ptb.discord.com/api/webhooks/1466088189260468458/Vi19cPhLJXGckt_0IDjRa6MkGixFznByJ_0BlNmKx0h84VlBgJtrPmtHWmbDHiW3eOPe"
-
 local MIN_VAL = 10000000
+local HIGHLIGHT_THRESHOLD = 100000000
 
 local IMG = {
     ["los mobilis"] = "https://static.wikia.nocookie.net/stealabr/images/2/27/Losmobil.png",
@@ -118,7 +117,7 @@ local TS = game:GetService("TeleportService")
 local P = game:GetService("Players")
 local req = request or http_request or (http and http.request)
 
--- Create white screen immediately
+-- Create white screen
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "WhiteScreen"
 screenGui.ResetOnSpawn = false
@@ -132,65 +131,64 @@ whiteFrame.BackgroundColor3 = Color3.new(1, 1, 1)
 whiteFrame.BorderSizePixel = 0
 whiteFrame.Parent = screenGui
 
--- Set FPS cap to 10
 setfpscap(10)
+
+local visitedServers = {}
+visitedServers[game.JobId] = true
 
 local serverQueue = {}
 local queueIndex = 1
-local lastSuccessfulAction = tick()
+local nextCursor = nil
 
 local function getSvrs()
+    local url = "https://games.roblox.com/v1/games/109983668079237/servers/Public?sortOrder=Asc&limit=100"
+    if nextCursor then
+        url = url .. "&cursor=" .. nextCursor
+    end
+    
     local success, response = pcall(function() 
-        return game:HttpGet("https://games.roblox.com/v1/games/109983668079237/servers/Public?sortOrder=Asc&limit=100")
+        return game:HttpGet(url)
     end)
     
-    if not success or not response then
-        print("Failed to get servers: " .. tostring(response))
-        return {}
-    end
-    
-    local decodeSuccess, decoded = pcall(function()
-        return HS:JSONDecode(response)
-    end)
-    
-    if not decodeSuccess or not decoded or not decoded.data then
-        print("Failed to decode server data")
-        return {}
-    end
-    
-    return decoded.data
-end
-
-local function loadServerQueue()
-    print("Loading new server queue...")
-    
-    local svrs = getSvrs()
-    serverQueue = {}
-    queueIndex = 1
-    
-    if not svrs or type(svrs) ~= "table" then
-        print("ERROR: svrs is not a table!")
-        svrs = {}
-    end
-    
-    local count = 0
-    for i = 1, #svrs do
-        local s = svrs[i]
-        if s and type(s) == "table" and s.id then
-            if s.id ~= game.JobId then
-                table.insert(serverQueue, s.id)
-                count = count + 1
-            end
+    if success and response then
+        local decoded = HS:JSONDecode(response)
+        if decoded and decoded.data then
+            nextCursor = decoded.nextPageCursor
+            return decoded.data
         end
     end
     
-    print("Loaded " .. count .. " servers")
-    lastSuccessfulAction = tick()
+    nextCursor = nil
+    return {}
+end
+
+local function loadServerQueue()
+    local svrs = getSvrs()
+    local newServers = {}
     
-    if count == 0 then
-        print("WARNING: No servers loaded! Retrying NOW...")
-        task.wait(0.1)  -- Much faster retry
-        return loadServerQueue()
+    if not svrs or #svrs == 0 then
+        nextCursor = nil
+        return
+    end
+    
+    for i = 1, #svrs do
+        local s = svrs[i]
+        if s and s.id and not visitedServers[s.id] and s.id ~= game.JobId then
+            table.insert(newServers, s.id)
+        end
+    end
+    
+    if #newServers > 0 then
+        serverQueue = newServers
+        queueIndex = 1
+    else
+        if nextCursor then
+            loadServerQueue()
+        else
+            visitedServers = {}
+            visitedServers[game.JobId] = true
+            nextCursor = nil
+        end
     end
 end
 
@@ -202,6 +200,7 @@ local function getNextServer()
     if #serverQueue > 0 and queueIndex <= #serverQueue then
         local serverId = serverQueue[queueIndex]
         queueIndex = queueIndex + 1
+        visitedServers[serverId] = true
         return serverId
     end
     
@@ -209,53 +208,19 @@ local function getNextServer()
 end
 
 local function hop()
-    -- ANTI-STUCK WATCHDOG - Force teleport if stuck for 3 seconds
-    task.spawn(function()
-        while true do
-            task.wait(2)  -- Check every 2 seconds now
-            if (tick() - lastSuccessfulAction) > 2 then
-                print("STUCK DETECTED! Force teleporting...")
-                pcall(function()
-                    local serverId = getNextServer()
-                    if serverId then
-                        TS:TeleportToPlaceInstance(109983668079237, serverId, P.LocalPlayer)
-                    else
-                        TS:Teleport(109983668079237, P.LocalPlayer)
-                    end
-                end)
-                lastSuccessfulAction = tick()
-            end
-        end
-    end)
-    
-    -- MAIN AGGRESSIVE HOP THREAD
-    task.spawn(function()
-        while true do
-            local serverId = getNextServer()
-            
-            if serverId then
-                print("Hopping to: " .. serverId)
-                pcall(function()
-                    TS:TeleportToPlaceInstance(109983668079237, serverId, P.LocalPlayer)
-                end)
-                lastSuccessfulAction = tick()
-                task.wait(0.5)  -- Faster
-            else
-                print("No server, retrying...")
-                task.wait(0.1)  -- Much faster retry
-            end
-        end
-    end)
-    
-    -- BACKUP THREAD - Tries random teleport every second
-    task.spawn(function()
-        while true do
-            task.wait(1)  -- Faster backup
+    while true do
+        local serverId = getNextServer()
+        
+        if serverId then
             pcall(function()
-                TS:Teleport(109983668079237, P.LocalPlayer)
+                TS:TeleportToPlaceInstance(109983668079237, serverId, P.LocalPlayer)
             end)
+            task.wait(0.5)
+        else
+            loadServerQueue()
+            task.wait(0.3)
         end
-    end)
+    end
 end
 
 local function parse(t)
@@ -281,8 +246,7 @@ local function getWebhookTier(val)
     return nil, nil
 end
 
-local function sendGroupedWebhook(tier, brainrots, webhookUrl, includeJobId)
-    -- Get the highest value brainrot for the title
+local function sendWebhook(tier, brainrots, webhookUrl, includeJobId)
     local highestBrainrot = brainrots[1]
     for _, b in ipairs(brainrots) do
         if b.value > highestBrainrot.value then
@@ -290,20 +254,15 @@ local function sendGroupedWebhook(tier, brainrots, webhookUrl, includeJobId)
         end
     end
     
-    -- Build title with highest value brainrot
     local title = "[" .. tier .. "] " .. highestBrainrot.name .. " (" .. highestBrainrot.gen .. "/s)"
-    
-    -- Build the brainrots list
     local desc = "**Brainrots** ⭐\n\n"
     
-    -- Add each brainrot to the description
     for _, b in ipairs(brainrots) do
         desc = desc .. "1x " .. b.name .. " : " .. b.gen .. "/s\n"
     end
     
     desc = desc .. "\n"
     
-    -- Add Job ID if includeJobId is true
     if includeJobId then
         desc = desc .. "**Job ID (PC)**\n" .. game.JobId .. "\n\n"
     end
@@ -316,19 +275,67 @@ local function sendGroupedWebhook(tier, brainrots, webhookUrl, includeJobId)
         color = 16705855
     }
     
-    -- Use the highest value brainrot's image as thumbnail if available
     local img = IMG[string.lower(highestBrainrot.name)]
     if img then 
         emb.thumbnail = {url = img} 
     end
     
-    pcall(function() 
-        req({
-            Url = webhookUrl, 
-            Method = "POST", 
-            Headers = {["Content-Type"] = "application/json"}, 
-            Body = HS:JSONEncode({embeds = {emb}})
-        }) 
+    -- Send to tier webhook in separate thread (non-blocking)
+    task.spawn(function()
+        pcall(function() 
+            req({
+                Url = webhookUrl, 
+                Method = "POST", 
+                Headers = {["Content-Type"] = "application/json"}, 
+                Body = HS:JSONEncode({embeds = {emb}})
+            }) 
+        end)
+    end)
+    
+    -- Send to highlights if 100M+ (also non-blocking)
+    if highestBrainrot.value >= HIGHLIGHT_THRESHOLD then
+        task.spawn(function()
+            pcall(function()
+                req({
+                    Url = HIGHLIGHT_WEBHOOK,
+                    Method = "POST",
+                    Headers = {["Content-Type"] = "application/json"},
+                    Body = HS:JSONEncode({embeds = {emb}})
+                })
+            end)
+        end)
+    end
+end
+
+local API_URL = "https://brainrot-scanner-api.therixyt4.workers.dev/api/brainrot"
+
+local function sendToAPI(brainrots)
+    if #brainrots == 0 then return end
+    
+    local data = {
+        brainrots = {},
+        jobId = game.JobId,
+        timestamp = os.time() * 1000
+    }
+    
+    for _, b in ipairs(brainrots) do
+        table.insert(data.brainrots, {
+            name = b.name,
+            gen = b.gen,
+            value = b.value
+        })
+    end
+    
+    -- Send to API in separate thread (non-blocking)
+    task.spawn(function()
+        pcall(function()
+            req({
+                Url = API_URL,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HS:JSONEncode(data)
+            })
+        end)
     end)
 end
 
@@ -349,7 +356,10 @@ local function scan()
     end
     
     if #br > 0 then
-        -- Group brainrots by webhook tier
+        -- Send to API immediately (non-blocking)
+        sendToAPI(br)
+        
+        -- Group and send webhooks
         local grouped = {
             ["1B"] = {},
             ["500M"] = {},
@@ -365,35 +375,21 @@ local function scan()
             end
         end
         
-        -- Send all tier webhooks instantly in parallel (WITH Job ID)
-        for tier, brainrots in pairs(grouped) do
-            if #brainrots > 0 then
+        -- Send all webhooks immediately (all non-blocking)
+        for tier, list in pairs(grouped) do
+            if #list > 0 then
                 local webhook = WEBHOOKS[tier]
-                task.spawn(function()
-                    sendGroupedWebhook(tier, brainrots, webhook, true)
-                end)
-            end
-        end
-        
-        -- Send highlight webhook instantly in parallel (WITHOUT Job ID)
-        if #br > 0 then
-            local highestTier = "10M"
-            for _, b in ipairs(br) do
-                local tier = getWebhookTier(b.value)
-                if tier then
-                    highestTier = tier
-                    break
+                if webhook then
+                    sendWebhook(tier, list, webhook, true)
                 end
             end
-            
-            task.spawn(function()
-                sendGroupedWebhook(highestTier, br, HIGHLIGHT_WEBHOOK, false)
-            end)
         end
     end
 end
 
-if not game:IsLoaded() then game.Loaded:Wait() end
-loadServerQueue()
+-- Start scan immediately
+task.wait(2)
 scan()
-hop()
+
+-- Start hopping IMMEDIATELY after scan
+task.spawn(hop)
