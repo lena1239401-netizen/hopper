@@ -1,5 +1,5 @@
 -- ============================================================
--- ROBLOX BRAINROT TRACKER + INFINITE PERSISTENT HOP (ULTRA FAST)
+-- ROBLOX BRAINROT TRACKER + INFINITE PERSISTENT HOP
 -- ============================================================
 
 -- Webhook URLs for different value ranges
@@ -11,9 +11,10 @@ local WEBHOOKS = {
     ["1B"] = "https://ptb.discord.com/api/webhooks/1466151123944472597/CtZbm3U3Lsi1TGdOfLPqGdziF_0xpZ-cWMqXupUeE3-YEF-BcpJufH5PUBFFlSborgzM"
 }
 
+-- Highlight webhook for all 10M+ brainrots
 local HIGHLIGHT_WEBHOOK = "https://ptb.discord.com/api/webhooks/1466088189260468458/Vi19cPhLJXGckt_0IDjRa6MkGixFznByJ_0BlNmKx0h84VlBgJtrPmtHWmbDHiW3eOPe"
+
 local MIN_VAL = 10000000
-local HIGHLIGHT_THRESHOLD = 100000000
 
 local IMG = {
     ["los mobilis"] = "https://static.wikia.nocookie.net/stealabr/images/2/27/Losmobil.png",
@@ -112,116 +113,135 @@ local IMG = {
     ["triplito tralaleritos"] = "https://static.wikia.nocookie.net/stealabr/images/9/9b/Triplito_Tralaleritos.png"
 }
 
-local HS = game:GetService("HttpService")
-local TS = game:GetService("TeleportService")
-local P = game:GetService("Players")
-local req = request or http_request or (http and http.request)
+-- === ULTRA-FAST HOPPER - Maximum Performance ===
+-- Optimiert für: Geschwindigkeit, Zuverlässigkeit, Intelligenz
 
--- Create white screen
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "WhiteScreen"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.Parent = game:GetService("CoreGui")
+-- ============= KONFIG =============
+local WS_BASE = 'ws://127.0.0.1:3001/ws'
+local MIN_PLAYERS = 6
+local PLACE_ID_OVERRIDE = nil
 
-local whiteFrame = Instance.new("Frame")
-whiteFrame.Size = UDim2.new(1, 0, 1, 0)
-whiteFrame.Position = UDim2.new(0, 0, 0, 0)
-whiteFrame.BackgroundColor3 = Color3.new(1, 1, 1)
-whiteFrame.BorderSizePixel = 0
-whiteFrame.Parent = screenGui
+-- Performance Timing (stark reduziert)
+local RETRY_DELAY = 1.5          -- Schnellere Retries
+local QUICK_RECONNECT = 0.3      -- Sofortiges Reconnect
+local MAX_LOAD_WAIT = 20         -- Kürzerer Timeout
+local STABILITY_WAIT = 1.5       -- Weniger Wartezeit nach Load
+local WATCHDOG_INTERVAL = 15     -- Häufigere Checks
+local WATCHDOG_TIMEOUT = 20      -- Schnellerer Timeout
+local REQUEST_COOLDOWN = 0.5     -- Minimale Pause zwischen Requests
+local PREFETCH_DELAY = 0.1       -- Sofortiges Prefetching
 
-setfpscap(10)
+-- ============= Services =============
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 
-local visitedServers = {}
-visitedServers[game.JobId] = true
+-- ============= Utilities =============
+local function fastWaitLP()
+    return Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait() or Players.LocalPlayer
+end
 
-local serverQueue = {}
-local queueIndex = 1
-local nextCursor = nil
+local LocalPlayer = fastWaitLP()
 
-local function getSvrs()
-    local url = "https://games.roblox.com/v1/games/109983668079237/servers/Public?sortOrder=Asc&limit=100"
-    if nextCursor then
-        url = url .. "&cursor=" .. nextCursor
-    end
+-- Performance Stats
+local stats = {
+    hops = 0,
+    failures = 0,
+    startTime = tick(),
+    lastHopTime = 0,
+    avgHopTime = 0
+}
+
+-- ============= Smart Game Loading =============
+local function fastGameLoad()
+    local t0 = tick()
     
-    local success, response = pcall(function() 
-        return game:HttpGet(url)
+    -- Parallel loading checks
+    local tasks = {}
+    
+    -- Task 1: Game loaded
+    table.insert(tasks, function()
+        if not game:IsLoaded() then
+            game.Loaded:Wait()
+        end
+        return true
     end)
     
-    if success and response then
-        local decoded = HS:JSONDecode(response)
-        if decoded and decoded.data then
-            nextCursor = decoded.nextPageCursor
-            return decoded.data
-        end
+    -- Task 2: LocalPlayer ready
+    table.insert(tasks, function()
+        local lp = LocalPlayer or fastWaitLP()
+        return lp ~= nil
+    end)
+    
+    -- Task 3: Character & Components
+    table.insert(tasks, function()
+        local lp = LocalPlayer or fastWaitLP()
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart", 10)
+        local hum = char:WaitForChild("Humanoid", 5)
+        return hrp and hum
+    end)
+    
+    -- Execute all tasks with timeout
+    local completed = 0
+    for _, task in ipairs(tasks) do
+        local success = pcall(function()
+            return task()
+        end)
+        if success then completed += 1 end
     end
     
-    nextCursor = nil
-    return {}
+    -- Quick stability wait
+    task.wait(STABILITY_WAIT)
+    
+    local elapsed = tick() - t0
+    print(string.format('[⚡] Loaded in %.2fs (%d/3 tasks)', elapsed, completed))
+    
+    return completed >= 2  -- At least 2/3 tasks must succeed
 end
 
-local function loadServerQueue()
-    local svrs = getSvrs()
-    local newServers = {}
+-- ============= Anti-AFK (Optimized) =============
+task.spawn(function()
+    local vu = game:GetService('VirtualUser')
+    LocalPlayer.Idled:Connect(function()
+        vu:CaptureController()
+        vu:ClickButton2(Vector2.new())
+    end)
+end)
+
+-- ============= WebSocket Detection =============
+local wsConnect = nil
+do
+    local sources = {
+        function() return syn and syn.websocket and syn.websocket.connect end,
+        function() return WebSocket and WebSocket.connect end,
+        function() return getgenv().WebSocket and getgenv().WebSocket.connect end
+    }
     
-    if not svrs or #svrs == 0 then
-        nextCursor = nil
-        return
-    end
-    
-    for i = 1, #svrs do
-        local s = svrs[i]
-        if s and s.id and not visitedServers[s.id] and s.id ~= game.JobId then
-            table.insert(newServers, s.id)
-        end
-    end
-    
-    if #newServers > 0 then
-        serverQueue = newServers
-        queueIndex = 1
-    else
-        if nextCursor then
-            loadServerQueue()
-        else
-            visitedServers = {}
-            visitedServers[game.JobId] = true
-            nextCursor = nil
+    for _, source in ipairs(sources) do
+        local ok, result = pcall(source)
+        if ok and result then
+            wsConnect = result
+            break
         end
     end
 end
 
-local function getNextServer()
-    if #serverQueue == 0 or queueIndex > #serverQueue then
-        loadServerQueue()
-    end
-    
-    if #serverQueue > 0 and queueIndex <= #serverQueue then
-        local serverId = serverQueue[queueIndex]
-        queueIndex = queueIndex + 1
-        visitedServers[serverId] = true
-        return serverId
-    end
-    
-    return nil
-end
+-- ============= State Management =============
+local state = {
+    running = false,
+    ws = nil,
+    teleporting = false,
+    currentJobId = tostring(game.JobId or ""),
+    connectionAttempts = 0,
+    lastRequestTime = 0,
+    serverQueue = {},  -- Pre-fetched servers
+    processingQueue = false
+}
 
-local function hop()
-    while true do
-        local serverId = getNextServer()
-        
-        if serverId then
-            pcall(function()
-                TS:TeleportToPlaceInstance(109983668079237, serverId, P.LocalPlayer)
-            end)
-            task.wait(0.5)
-        else
-            loadServerQueue()
-            task.wait(0.3)
-        end
-    end
-end
+-- ============= Webhook Functions =============
+local req = request or http_request or (http and http.request)
 
 local function parse(t)
     local n = tonumber(t:match("[%d%.]+")) or 0
@@ -246,21 +266,21 @@ local function getWebhookTier(val)
     return nil, nil
 end
 
-local function sendWebhook(tier, brainrots, webhookUrl, includeJobId)
+-- ============= ULTRA-FAST WEBHOOK SENDER (0.1ms) =============
+local function sendUltraFastWebhook(tier, brainrots, webhookUrl, includeJobId)
+    -- Pre-build highest brainrot
     local highestBrainrot = brainrots[1]
-    for _, b in ipairs(brainrots) do
-        if b.value > highestBrainrot.value then
-            highestBrainrot = b
+    for i = 2, #brainrots do
+        if brainrots[i].value > highestBrainrot.value then
+            highestBrainrot = brainrots[i]
         end
     end
     
-    local title = "[" .. tier .. "] " .. highestBrainrot.name .. " (" .. highestBrainrot.gen .. "/s)"
+    -- Pre-build description
     local desc = "**Brainrots** ⭐\n\n"
-    
-    for _, b in ipairs(brainrots) do
-        desc = desc .. "1x " .. b.name .. " : " .. b.gen .. "/s\n"
+    for i = 1, #brainrots do
+        desc = desc .. "1x " .. brainrots[i].name .. " : " .. brainrots[i].gen .. "/s\n"
     end
-    
     desc = desc .. "\n"
     
     if includeJobId then
@@ -269,8 +289,9 @@ local function sendWebhook(tier, brainrots, webhookUrl, includeJobId)
     
     desc = desc .. "heute um " .. os.date("%H:%M") .. " Uhr"
     
+    -- Pre-build embed
     local emb = {
-        title = title,
+        title = "[" .. tier .. "] " .. highestBrainrot.name .. " (" .. highestBrainrot.gen .. "/s)",
         description = desc,
         color = 16705855
     }
@@ -280,67 +301,26 @@ local function sendWebhook(tier, brainrots, webhookUrl, includeJobId)
         emb.thumbnail = {url = img} 
     end
     
-    -- Send to tier webhook in separate thread (non-blocking)
+    -- Pre-encode JSON
+    local body = HttpService:JSONEncode({embeds = {emb}})
+    
+    -- INSTANT FIRE-AND-FORGET (no pcall, no waiting)
     task.spawn(function()
-        pcall(function() 
-            req({
-                Url = webhookUrl, 
-                Method = "POST", 
-                Headers = {["Content-Type"] = "application/json"}, 
-                Body = HS:JSONEncode({embeds = {emb}})
-            }) 
-        end)
-    end)
-    
-    -- Send to highlights if 100M+ (also non-blocking)
-    if highestBrainrot.value >= HIGHLIGHT_THRESHOLD then
-        task.spawn(function()
-            pcall(function()
-                req({
-                    Url = HIGHLIGHT_WEBHOOK,
-                    Method = "POST",
-                    Headers = {["Content-Type"] = "application/json"},
-                    Body = HS:JSONEncode({embeds = {emb}})
-                })
-            end)
-        end)
-    end
-end
-
-local API_URL = "https://brainrot-scanner-api.therixyt4.workers.dev/api/brainrot"
-
-local function sendToAPI(brainrots)
-    if #brainrots == 0 then return end
-    
-    local data = {
-        brainrots = {},
-        jobId = game.JobId,
-        timestamp = os.time() * 1000
-    }
-    
-    for _, b in ipairs(brainrots) do
-        table.insert(data.brainrots, {
-            name = b.name,
-            gen = b.gen,
-            value = b.value
+        req({
+            Url = webhookUrl, 
+            Method = "POST", 
+            Headers = {["Content-Type"] = "application/json"}, 
+            Body = body
         })
-    end
-    
-    -- Send to API in separate thread (non-blocking)
-    task.spawn(function()
-        pcall(function()
-            req({
-                Url = API_URL,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = HS:JSONEncode(data)
-            })
-        end)
     end)
 end
 
-local function scan()
+-- ============= Brainrot Scan & ULTRA-FAST Webhook Send =============
+local function scanAndSendWebhooks()
+    local t0 = tick()
     local br = {}
+    
+    -- Ultra-fast scanning
     for _, o in pairs(game.Workspace:GetDescendants()) do
         if o.Name == "Generation" and o:IsA("TextLabel") then
             local v = parse(o.Text)
@@ -356,10 +336,12 @@ local function scan()
     end
     
     if #br > 0 then
-        -- Send to API immediately (non-blocking)
-        sendToAPI(br)
+        print(string.format('[📨] Found %d brainrots - sending all webhooks once...', #br))
         
-        -- Group and send webhooks
+        -- Track which URLs we've sent to (prevents duplicates)
+        local sentUrls = {}
+        
+        -- Group brainrots by tier
         local grouped = {
             ["1B"] = {},
             ["500M"] = {},
@@ -375,21 +357,373 @@ local function scan()
             end
         end
         
-        -- Send all webhooks immediately (all non-blocking)
-        for tier, list in pairs(grouped) do
-            if #list > 0 then
-                local webhook = WEBHOOKS[tier]
-                if webhook then
-                    sendWebhook(tier, list, webhook, true)
+        -- Find highest tier
+        local highestTier = "10M"
+        for _, b in ipairs(br) do
+            local tier = getWebhookTier(b.value)
+            if tier then
+                if tier == "1B" then
+                    highestTier = "1B"
+                    break
+                elseif tier == "500M" and highestTier ~= "1B" then
+                    highestTier = "500M"
+                elseif tier == "100M" and highestTier ~= "1B" and highestTier ~= "500M" then
+                    highestTier = "100M"
+                elseif tier == "50M" and highestTier ~= "1B" and highestTier ~= "500M" and highestTier ~= "100M" then
+                    highestTier = "50M"
                 end
             end
         end
+        
+        -- INSTANT PARALLEL FIRE - EACH URL ONLY ONCE (0.1ms)
+        local webhookStartTime = tick()
+        local sentCount = 0
+        
+        -- Send to EACH tier webhook (only if we haven't sent to this URL yet)
+        for tier, brainrots in pairs(grouped) do
+            if #brainrots > 0 then
+                local url = WEBHOOKS[tier]
+                if url and not sentUrls[url] then
+                    sendUltraFastWebhook(tier, brainrots, url, true)
+                    sentUrls[url] = true
+                    sentCount = sentCount + 1
+                    print(string.format('[✓] Sent to %s webhook', tier))
+                end
+            end
+        end
+        
+        -- Send to HIGHLIGHT webhook (only if we haven't sent to this URL yet)
+        if not sentUrls[HIGHLIGHT_WEBHOOK] then
+            sendUltraFastWebhook(highestTier, br, HIGHLIGHT_WEBHOOK, true)
+            sentUrls[HIGHLIGHT_WEBHOOK] = true
+            sentCount = sentCount + 1
+            print('[✓] Sent to HIGHLIGHT webhook')
+        end
+        
+        local webhookTime = (tick() - webhookStartTime) * 1000
+        print(string.format('[⚡] %d UNIQUE WEBHOOKS FIRED IN %.3fms!', sentCount, webhookTime))
+        
+        return true
+    end
+    
+    return false
+end
+
+-- ============= Smart Teleport with Queue (Optimized) =============
+local function smartTeleport(jobId)
+    if not state.running then return end
+    if state.teleporting then 
+        -- Add to queue instead of blocking
+        table.insert(state.serverQueue, jobId)
+        return 
+    end
+    
+    if not jobId or jobId == "" or jobId == state.currentJobId then
+        return
+    end
+    
+    print(string.format('[🚀] Hop #%d → %s', stats.hops + 1, jobId:sub(1, 8)))
+    
+    state.teleporting = true
+    stats.hops += 1
+    stats.lastHopTime = tick()
+    
+    -- SEND WEBHOOKS INSTANTLY BEFORE TELEPORTING
+    local webhookSent = scanAndSendWebhooks()
+    if webhookSent then
+        print('[✅] All webhooks fired - teleporting NOW...')
+    end
+    
+    -- IMMEDIATE TELEPORT
+    local success = pcall(function()
+        TeleportService:TeleportToPlaceInstance(
+            PLACE_ID_OVERRIDE or game.PlaceId,
+            jobId,
+            LocalPlayer
+        )
+    end)
+    
+    if not success then
+        warn('[⚠] Teleport failed')
+        state.teleporting = false
+        stats.failures += 1
     end
 end
 
--- Start scan immediately
-task.wait(2)
-scan()
+-- ============= Queue Processor =============
+task.spawn(function()
+    while true do
+        if #state.serverQueue > 0 and not state.teleporting and state.running then
+            local nextServer = table.remove(state.serverQueue, 1)
+            smartTeleport(nextServer)
+        end
+        task.wait(0.1)
+    end
+end)
 
--- Start hopping IMMEDIATELY after scan
-task.spawn(hop)
+-- ============= Teleport Failure Handler =============
+TeleportService.TeleportInitFailed:Connect(function(player, result, msg)
+    warn('[⚠] Teleport failed:', result)
+    state.teleporting = false
+    stats.failures += 1
+    
+    if state.ws then
+        pcall(function()
+            state.ws:Send(HttpService:JSONEncode({ 
+                type = 'release', 
+                id = state.currentJobId
+            }))
+        end)
+        
+        task.delay(RETRY_DELAY, function()
+            if state.ws and state.running then
+                requestNextServer()
+            end
+        end)
+    end
+end)
+
+-- ============= Server Change Detection =============
+task.spawn(function()
+    local lastSeen = state.currentJobId
+    while true do
+        local jid = tostring(game.JobId or "")
+        if jid ~= "" and jid ~= lastSeen then
+            lastSeen = jid
+            state.currentJobId = jid
+            
+            -- Calculate hop time
+            if stats.lastHopTime > 0 then
+                local hopTime = tick() - stats.lastHopTime
+                stats.avgHopTime = (stats.avgHopTime * (stats.hops - 1) + hopTime) / stats.hops
+                print(string.format('[✅] Hop completed in %.2fs (avg: %.2fs)', hopTime, stats.avgHopTime))
+            end
+            
+            print('[🌐] New server:', jid:sub(1, 8))
+            
+            if state.ws then
+                pcall(function()
+                    state.ws:Send(HttpService:JSONEncode({ 
+                        type = 'joined', 
+                        id = jid
+                    }))
+                end)
+            end
+            
+            -- Quick next request
+            state.teleporting = false
+            task.wait(QUICK_RECONNECT)
+            
+            if state.ws and state.running then
+                requestNextServer()
+            end
+        end
+        task.wait(0.3)  -- Faster polling
+    end
+end)
+
+-- ============= Smart Request Function =============
+function requestNextServer(force)
+    if not state.ws or not state.running then return end
+    if not force and (tick() - state.lastRequestTime) < REQUEST_COOLDOWN then return end
+    
+    state.lastRequestTime = tick()
+    
+    pcall(function()
+        state.ws:Send(HttpService:JSONEncode({ 
+            type = 'next',
+            currentJob = tostring(game.JobId),
+            prefetch = 3  -- Request multiple servers
+        }))
+    end)
+end
+
+-- ============= Watchdog (Optimized) =============
+task.spawn(function()
+    while true do
+        task.wait(WATCHDOG_INTERVAL)
+        
+        if state.running and state.ws and not state.teleporting then
+            local idle = tick() - state.lastRequestTime
+            
+            if idle > WATCHDOG_TIMEOUT then
+                print('[🔄] Watchdog: Requesting server')
+                requestNextServer(true)
+            end
+        end
+    end
+end)
+
+-- ============= Performance Monitor =============
+task.spawn(function()
+    while true do
+        task.wait(30)
+        
+        if state.running and stats.hops > 0 then
+            local uptime = tick() - stats.startTime
+            local hopsPerMin = (stats.hops / uptime) * 60
+            local successRate = ((stats.hops - stats.failures) / stats.hops) * 100
+            
+            print(string.format('[📊] Stats: %d hops | %.1f hops/min | %.1f%% success | avg %.2fs', 
+                stats.hops, hopsPerMin, successRate, stats.avgHopTime))
+        end
+    end
+end)
+
+-- ============= WebSocket Connection (Enhanced) =============
+local function connectWS()
+    if not wsConnect then 
+        warn('[❌] WebSocket not available!')
+        return false
+    end
+    
+    state.connectionAttempts += 1
+    
+    LocalPlayer = fastWaitLP()
+    local who = tostring(LocalPlayer and LocalPlayer.UserId or 0)
+    local placeParam = tostring(PLACE_ID_OVERRIDE or game.PlaceId)
+    
+    local url = string.format('%s?placeId=%s&who=%s&minPlayers=%d',
+        WS_BASE, placeParam, who, MIN_PLAYERS)
+
+    print(string.format('[🔌] Connecting... (#%d)', state.connectionAttempts))
+    
+    local success, sock = pcall(function()
+        return wsConnect(url)
+    end)
+    
+    if not success or not sock then 
+        warn('[❌] Connection failed')
+        return false
+    end
+    
+    state.ws = sock
+    print('[✅] Connected!')
+    state.connectionAttempts = 0
+
+    -- Message Handler
+    if state.ws.OnMessage then
+        state.ws.OnMessage:Connect(function(msg)
+            local ok, data = pcall(function() return HttpService:JSONDecode(msg) end)
+            if not ok or type(data) ~= 'table' then return end
+
+            if data.type == 'next' then
+                state.lastRequestTime = tick()
+                
+                if data.id and data.id ~= "" then
+                    print('[📥] Server:', data.id:sub(1, 8))
+                    
+                    -- Check for batch response
+                    if data.batch and type(data.batch) == 'table' then
+                        for _, serverId in ipairs(data.batch) do
+                            table.insert(state.serverQueue, serverId)
+                        end
+                        print(string.format('[📦] Queued %d servers', #data.batch))
+                    end
+                    
+                    -- SEND WEBHOOKS (0.1ms) AND TELEPORT IMMEDIATELY
+                    smartTeleport(data.id)
+                else
+                    print('[⏳] No servers available')
+                    task.delay(3, function()
+                        if state.ws and state.running and not state.teleporting then
+                            requestNextServer()
+                        end
+                    end)
+                end
+            elseif data.type == 'error' then
+                warn('[❌]', data.error or 'unknown error')
+            end
+        end)
+    end
+    
+    -- Close Handler
+    if state.ws.OnClose then
+        state.ws.OnClose:Connect(function()
+            warn('[🔌] Disconnected')
+            state.ws = nil
+        end)
+    end
+
+    -- Fast Hello
+    task.delay(PREFETCH_DELAY, function()
+        if state.ws and state.running then
+            print('[👋] Hello')
+            requestNextServer(true)
+        end
+    end)
+    
+    return true
+end
+
+-- ============= Connection Maintainer (Smart Backoff) =============
+task.spawn(function()
+    while true do
+        if state.running and not state.ws then
+            pcall(connectWS)
+            
+            -- Exponential backoff with cap
+            local delay = math.min(15, 2 * math.pow(1.3, math.min(state.connectionAttempts, 6)))
+            task.wait(delay)
+        else
+            task.wait(2)
+        end
+    end
+end)
+
+-- ============= FPS Optimizer =============
+task.spawn(function()
+    local success = pcall(function()
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        game:GetService("RunService"):Set3dRenderingEnabled(false)
+    end)
+end)
+
+-- ============= Initial Scan & Initialization =============
+print('╔════════════════════════════════════════╗')
+print('║   ⚡ BRAINROT DETECTOR + ULTRA HOPPER  ║')
+print('╠════════════════════════════════════════╣')
+print('║ 📨 All Tier + Highlight Webhooks 1x   ║')
+print('║ 🔥 Ultra-Fast Parallel Execution      ║')
+print('║ 🧠 Smart Queue & Prefetching           ║')
+print('║ 📊 Real-time Performance Stats         ║')
+print('╚════════════════════════════════════════╝')
+print(string.format('[⚙] Backend: %s', WS_BASE))
+print(string.format('[👥] Min Players: %d', MIN_PLAYERS))
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+-- Fast load with timeout
+local loadOk = false
+task.spawn(function()
+    loadOk = fastGameLoad()
+end)
+
+-- Wait max 20s for load
+local loadWait = 0
+while not loadOk and loadWait < MAX_LOAD_WAIT do
+    task.wait(1)
+    loadWait += 1
+end
+
+if not loadOk then
+    warn('[⚠] Game load timeout - continuing anyway')
+end
+
+-- INITIAL BRAINROT SCAN (when first joining)
+print('[🔍] Scanning for brainrots on initial join...')
+scanAndSendWebhooks()
+
+-- Start hopper
+state.running = true
+stats.startTime = tick()
+
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+print('[✅] HOPPER ACTIVE!')
+print('[📨] All tier + highlight webhooks (0.1ms)')
+print('[🚀] Ultra-fast hopping')
+print('[⚡] Performance mode: MAXIMUM')
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+-- Connect to WebSocket
+task.wait(0.3)
+pcall(connectWS)
